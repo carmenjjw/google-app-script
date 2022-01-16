@@ -1,0 +1,69 @@
+/*********************************** */
+// this code gets the weatehr forcast of given cities using weather one call api 
+// and trigger ad status update using facebook grapgh api
+// it can be used together with a App Script trigger to execute daily.
+// weather api documentation: https://openweathermap.org/api/one-call-api
+// facebook graph api documentation (ad set): https://developers.facebook.com/docs/marketing-api/reference/ad-campaign#Creating
+// created by: Carmen Jiang @Vekst
+// last edited: 20210116
+/********************************** */
+
+function myFunction() {
+
+// weather api to get the one day weather forcast of a certain city
+    var cityGps = {
+      stockholm: "&lat=59.275254&lon=18.035164",
+      malmo: "&lat=55.59438&lon=13.029953",
+      gotland: "&lat=57.639707&lon=18.314506",
+      halland: "&lat=56.672809&lon=12.873349",
+      goteborg: "&lat=57.735628&lon=12.012917" 
+    }
+
+    var endpointWeather = "https://api.openweathermap.org/data/2.5/onecall?"
+    var city = ["stockholm", "malmo", "gotland", "halland", "goteborg"]
+    //Logger.log(city[0])
+    //Logger.log(cityGps[city[0]])
+    var appId = "&appid=<api key>"
+    var exclude = "&exclude=current,minutely,hourly,alerts"
+
+
+// Facebook graph api call to change ad set status
+    var endpointFacebook = "https://graph.facebook.com/v12.0/";
+    var adsetId = {
+      stockholm: <ad set id>,
+      malmo: <ad set id>,
+      gotland: <ad set id>,
+      halland: <ad set id>,
+      goteborg: <ad set id>  
+    }
+    var method = "&method=POST"
+    //var campaignStatus = "?status=ACTIVE"
+    var key = "&access_token=<api key>"; // the api key becomes inactive in case of 60 days of inactivity
+
+
+for (let i = 0; i < city.length; i++){
+
+    // weather api call, get the weaher of tmr of target cities
+    var getWeatherRequest = `${endpointWeather}${cityGps[city[i]]}${appId}${exclude}` 
+    var responseWeather = UrlFetchApp.fetch(getWeatherRequest);
+    var out = JSON.parse(responseWeather);
+    var weather = out.daily[1].weather[0].main; // weather for tomorrow
+    Logger.log(`${city[i]} ${weather}`); //Gets the content of an HTTP response encoded as a string.
+
+
+    // conditional execution
+    if(weather === "Rain"){
+          var campaignStatus = "?status=ACTIVE";
+          var facebookUpdateRequest = `${endpointFacebook}${adsetId[city[i]]}${campaignStatus}${method}${key}`
+          var responseFacebook = UrlFetchApp.fetch(facebookUpdateRequest);
+          Logger.log("Activate " + `${city[i]} ${responseFacebook.getContentText()}`); //Gets the content of an HTTP response encoded as a string.
+      } else{
+        var campaignStatus = "?status=PAUSED";
+        var facebookUpdateRequest = `${endpointFacebook}${adsetId[city[i]]}${campaignStatus}${method}${key}`
+        var responseFacebook = UrlFetchApp.fetch(facebookUpdateRequest);
+        Logger.log("Paused " + `${city[i]} ${responseFacebook.getContentText()}`); 
+      }
+
+    }//for loop ends
+
+}//main function ends
