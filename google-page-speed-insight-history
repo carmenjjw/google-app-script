@@ -1,0 +1,44 @@
+function getPageSpeedv2() {
+
+// all the markets (sites), each corresponds to a sheet
+  var market = ['SE', 'DK', 'ES', 'NL', 'UK', 'Global']
+
+  for (let e = 0; e < market.length; e++){
+
+    var activeSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(market[e]);
+    Logger.log(`${market[e]}`)
+    var endpoint = "https://pagespeedonline.googleapis.com/pagespeedonline/v5/runPagespeed?url=";
+    var category = "&category=PERFORMANCE&strategy=MOBILE";
+    var key = "&key=<api key>";
+    var totalSpeed = 0;
+
+    // a for loop tp loop over all the 10 most visited pages of each site
+    for(let i = 2;i < 4; i++){
+
+      var urlCell = activeSheet.getRange(i,1).getValue();
+      var urlEncode = encodeURIComponent(urlCell);
+      var query = `${endpoint}${urlEncode}${category}${key}`;
+
+      var responseOne = UrlFetchApp.fetch(query);
+      var out = JSON.parse(responseOne.getContentText());
+      var result = out.lighthouseResult.audits.metrics.details.items[0].interactive;
+      //Logger.log("the result of SE " + `${i-1}` + " page is:" + `${result}`);
+      totalSpeed = totalSpeed + result;
+    }
+
+    // log out the avg page apeed of the 10 pages in seconds
+    var avgSpeed = totalSpeed / 10 / 1000;
+    var avgSpeedRound = avgSpeed.toFixed(2);
+    //Logger.log("the average speed for market " + `${market[e]}` + " is " + `${avgSpeed}`);
+    activeSheet.getRange(15,2).setValue(`${avgSpeedRound}` + " sec")
+
+    // add the weekly data to the google sheet repository
+    var sourceData = activeSheet.getRange(15,2);
+    var destination = activeSheet.getRange(18,2);
+    activeSheet.insertRowsBefore(18, 1);
+    sourceData.copyTo(destination, {contentsOnly:true});
+    activeSheet.getRange(18,1).setFormula('=today()');
+
+  }
+
+};
